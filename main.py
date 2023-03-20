@@ -5,25 +5,23 @@ Grammar Parser
 Detecting terminals and non-terminals
 March 19, 2023
 """
-
-import sys
 import re
 
 
-def read_lines(file_path):
+def read_lines():
     """
-    read_lines open the file in file_path and reads the first line. The first
-    line is converted to an integer and determines the number of lines to read
-    below. Each line is added to a list.
+    read_lines is a function that reads multiple lines of input from the user
+    and stores them in a list. The first line is a number that determines the
+    number of lines to read.
 
-    :param file_path: the relative or absolute path of the file to read.
-    :return: a list where each element is a line of the file.
+    :return: list where each element is a production.
     """
     lines = []
-    with open(file_path, 'r') as f:
-        num_lines = int(f.readline())
-        for _ in range(num_lines):
-            lines.append(f.readline())
+    lines_to_read = int(input())
+
+    for _ in range(lines_to_read):
+        production = input()
+        lines.append(production)
     return lines
 
 
@@ -74,22 +72,7 @@ def get_symbols(grammar):
 
 def main():
 
-    # The program must receive the path of the file to read as an arg
-    if len(sys.argv) != 2:
-        print(f'Usage: {sys.argv[0]} <input file>')
-        exit(1)
-
-    file_path = sys.argv[1]
-
-    try:
-        grammar = read_lines(file_path)
-    except FileNotFoundError:
-        print(f'Error: File {file_path} not found')
-        exit(2)
-    except Exception as e:
-        print(f'Error: {e}')
-        exit(3)
-
+    grammar = read_lines()
     symbols = get_symbols(grammar)
     print("Terminal: " + ", ".join(symbols['terminals']))
     print("Non terminal: " + ", ".join(symbols['non_terminals']))
