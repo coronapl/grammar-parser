@@ -12,7 +12,8 @@
 
 ## Usage
 
-- python3 main.py \<path of the test case file>
+- python3 main.py \<path of the test case file>  
+- `git clone https://github.com/coronapl/grammar-parser.git && cd grammar-parser && chmod +x run.sh && ./run.sh`
 
 ## Examples
 
