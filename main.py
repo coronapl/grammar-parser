@@ -3,9 +3,9 @@ Pablo Valencia A01700912
 Compilers
 Grammar Parser
 Detecting terminals and non-terminals
-March 19, 2023
+Creating first and follow sets
+April 27, 2023
 """
-import re
 
 
 def read_lines():
@@ -46,12 +46,12 @@ def get_symbols(grammar):
                 symbol = ' '
 
             if non_terminal in symbols_graph:
-                symbols_graph[non_terminal].add(symbol)
+                symbols_graph[non_terminal].append(symbol)
             else:
-                symbols_graph[non_terminal] = {symbol}
+                symbols_graph[non_terminal] = [symbol]
 
             if symbol != ' ' and symbol not in symbols_graph:
-                symbols_graph[symbol] = set()
+                symbols_graph[symbol] = []
 
     terminals, non_terminals = [], []
     for symbol, productions in symbols_graph.items():
@@ -59,23 +59,180 @@ def get_symbols(grammar):
         if len(productions) == 0:
             terminals.append(symbol)
         else:
-            # Using a regex to verify valid characters in a non-terminal
-            if not re.match(r"^[a-zA-Z_-]+$", symbol):
-                raise Exception('Error: invalid character found.')
             non_terminals.append(symbol)
 
     return {
-        'terminals': terminals,
-        'non_terminals': non_terminals
+        'graph': symbols_graph,
+        'terminals': set(terminals),
+        'non_terminals': set(non_terminals)
     }
+
+def get_first(current, grammar, firsts, non_terminals, visited):
+    """
+    get_first receives a symbol of a grammar and returns the set that contains
+    the possible first terminals.
+    :param current: the symbol used to obtain the first set.
+    :param grammar: a dictionary where the keys are non-terminals and the values
+     are arrays containing the productions of the non-terminals.
+    :param firsts: a dictionary where the keys are non-terminals and the values
+    are the corresponding first sets.
+    :param non_terminals: a set containing all non-terminals in the grammar.
+    :return: A set that contains the firsts of the current symbol.
+    """
+    # If it is terminal symbol
+    if current not in non_terminals:
+        return {current}
+
+    # If this first of current is already calculated
+    if current in firsts:
+        return firsts[current]
+
+    for i, production in enumerate(grammar[current]):
+        complete_production = f'{current} -> {" ".join(production)}'
+        if complete_production in visited:
+            continue
+
+        visited.add(complete_production)
+        current_first = get_first(production[0], grammar, firsts,
+                                  non_terminals, visited)
+        # If the current first has epsilon, repeat the process with the next
+        # symbol
+        if ' ' in current_first:
+            i = 1
+            while i < len(production):
+                next_symbol = get_first(production[i], grammar,
+                                        firsts, non_terminals, visited)
+                current_first = current_first.union(next_symbol)
+                if ' ' not in next_symbol:
+                    break
+                i += 1
+
+        if current not in firsts:
+            firsts[current] = set()
+        firsts[current] = firsts[current].union(current_first)
+    return firsts[current]
+
+
+def get_follow(current, grammar, follows, firsts, non_terminals):
+    """
+    get_follow receives a symbol of a grammar and returns the set that contains
+    all the possible follow terminals.
+    :param current: the symbol used to obtain the follow set.
+    :param grammar: a dictionary where the keys are non-terminals and the values
+    are arrays containing the productions of the non-terminals.
+    :param follows: a dictionary where the keys are non-terminals and the values
+    are the corresponding follow sets.
+    :param firsts: a dictionary where the keys are non-terminals and the values
+    are the corresponding first sets.
+    :param non_terminals: a set containing all non-terminals in the grammar.
+    :return: a set that contains the follows of the current symbol.
+    """
+    # If current has already been calculated
+    if current in follows:
+        return follows[current]
+
+    # Add '$' to the follow of the first non-terminal
+    follows[current] = set()
+    first_non_terminal = grammar[0].split()[0]
+    if current == first_non_terminal:
+        follows[current].add('$')
+
+    for production in grammar:
+        production_list = production.split()
+        non_terminal = production_list[0]
+
+        # Get the idx of the current symbol everytime it appears in a production
+        current_idx = [i + 2 for i, symbol in enumerate(production_list[2:])
+                       if symbol == current]
+        for idx in current_idx:
+            # If the current idx is the last symbol
+            if idx == len(production_list) - 1:
+                if non_terminal == production_list[idx]:
+                    continue
+                # Recursively get the follow of the current non-terminal
+                follows[current] = follows[current].union(
+                    get_follow(non_terminal, grammar, follows,
+                               firsts, non_terminals))
+            # If it is a terminal we add it to the set
+            elif production_list[idx + 1] not in non_terminals:
+                follows[current].add(production_list[idx + 1])
+            # If it is not that last symbol of the production we get the first
+            else:
+                follows[current] = follows[current].union(
+                    firsts[production_list[idx + 1]])
+                # If the first has epsilon repeat the process with the next
+                # symbol
+                if ' ' in follows[current]:
+                    i = idx + 1
+                    while ' ' in follows[current]:
+                        follows[current].remove(' ')
+                        if i == len(production_list) - 1:
+                            follows[current] = follows[current].union(
+                                get_follow(non_terminal, grammar, follows,
+                                           firsts, non_terminals))
+                            break
+                        if production_list[idx] not in non_terminals:
+                            follows[current].add(production_list[i])
+                            break
+                        follows[current] = follows[current].union(
+                            firsts[production_list[i]])
+                        i += 1
+    return follows[current]
+
+
+def process_grammar(grammar):
+    """
+    process_grammar receives a list of strings, where each string is a
+    production, and returns a dictionary.
+    :param grammar: a list where each element is a string that represents a
+    production.
+    :return: a dictionary where the keys are non-terminals and the values are
+    arrays of arrays. Each array is a production of the non-terminal.
+    """
+    processed_grammar = {}
+    for production in grammar:
+        production_list = production.split()
+        non_terminal = production_list[0]
+
+        if non_terminal not in processed_grammar:
+            processed_grammar[non_terminal] = []
+
+        current_production = []
+        for symbol in production_list[2:]:
+            if symbol == "'":
+                symbol = ' '
+
+            if symbol == ' ' and symbol in current_production:
+                continue
+            current_production.append(symbol)
+        processed_grammar[non_terminal].append(current_production)
+    return processed_grammar
 
 
 def main():
 
     grammar = read_lines()
     symbols = get_symbols(grammar)
+    processed_grammar = process_grammar(grammar)
+
+    print("------ TERMINALS AND NON TERMINALS ------")
     print("Terminal: " + ", ".join(symbols['terminals']))
     print("Non terminal: " + ", ".join(symbols['non_terminals']))
+    print("------ FIRST AND FOLLOWS ------")
+
+    first_dict = {}
+    for non_terminal in processed_grammar:
+        get_first(non_terminal, processed_grammar, first_dict,
+                  symbols['non_terminals'], set())
+
+    follow_dict = {}
+    for non_terminal in processed_grammar:
+        get_follow(non_terminal, grammar, follow_dict, first_dict,
+                   symbols['non_terminals'])
+
+    for non_terminal in first_dict:
+        print(f'{non_terminal} => FIRST = {first_dict[non_terminal]}, '
+              f'FOLLOW = {follow_dict[non_terminal]}')
 
 
 if __name__ == '__main__':
