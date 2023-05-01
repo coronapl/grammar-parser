@@ -4,7 +4,7 @@ Compilers
 Grammar Parser
 Detecting terminals and non-terminals
 Creating first and follow sets
-April 27, 2023
+April 30, 2023
 """
 
 
@@ -67,6 +67,7 @@ def get_symbols(grammar):
         'non_terminals': set(non_terminals)
     }
 
+
 def get_first(current, grammar, firsts, non_terminals, visited):
     """
     get_first receives a symbol of a grammar and returns the set that contains
@@ -127,16 +128,6 @@ def get_follow(current, grammar, follows, firsts, non_terminals):
     :param non_terminals: a set containing all non-terminals in the grammar.
     :return: a set that contains the follows of the current symbol.
     """
-    # If current has already been calculated
-    if current in follows:
-        return follows[current]
-
-    # Add '$' to the follow of the first non-terminal
-    follows[current] = set()
-    first_non_terminal = grammar[0].split()[0]
-    if current == first_non_terminal:
-        follows[current].add('$')
-
     for production in grammar:
         production_list = production.split()
         non_terminal = production_list[0]
@@ -150,9 +141,7 @@ def get_follow(current, grammar, follows, firsts, non_terminals):
                 if non_terminal == production_list[idx]:
                     continue
                 # Recursively get the follow of the current non-terminal
-                follows[current] = follows[current].union(
-                    get_follow(non_terminal, grammar, follows,
-                               firsts, non_terminals))
+                follows[current] = follows[current].union(follows[non_terminal])
             # If it is a terminal we add it to the set
             elif production_list[idx + 1] not in non_terminals:
                 follows[current].add(production_list[idx + 1])
@@ -168,8 +157,7 @@ def get_follow(current, grammar, follows, firsts, non_terminals):
                         follows[current].remove(' ')
                         if i == len(production_list) - 1:
                             follows[current] = follows[current].union(
-                                get_follow(non_terminal, grammar, follows,
-                                           firsts, non_terminals))
+                                follows[non_terminal])
                             break
                         if production_list[idx] not in non_terminals:
                             follows[current].add(production_list[i])
@@ -177,7 +165,6 @@ def get_follow(current, grammar, follows, firsts, non_terminals):
                         follows[current] = follows[current].union(
                             firsts[production_list[i]])
                         i += 1
-    return follows[current]
 
 
 def process_grammar(grammar):
@@ -221,14 +208,20 @@ def main():
     print("------ FIRST AND FOLLOWS ------")
 
     first_dict = {}
+    follow_dict = {}
     for non_terminal in processed_grammar:
+        follow_dict[non_terminal] = set()
         get_first(non_terminal, processed_grammar, first_dict,
                   symbols['non_terminals'], set())
 
-    follow_dict = {}
-    for non_terminal in processed_grammar:
-        get_follow(non_terminal, grammar, follow_dict, first_dict,
-                   symbols['non_terminals'])
+    follow_dict[grammar[0].split()[0]].add('$')
+    while True:
+        previous_dict = follow_dict.copy()
+        for non_terminal in processed_grammar:
+            get_follow(non_terminal, grammar, follow_dict, first_dict,
+                       symbols['non_terminals'])
+        if previous_dict == follow_dict:
+            break
 
     for non_terminal in first_dict:
         print(f'{non_terminal} => FIRST = {first_dict[non_terminal]}, '
