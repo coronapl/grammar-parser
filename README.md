@@ -1,10 +1,10 @@
-# Grammar Parser
+# SLR Table
 
 - Pablo Valencia A01700912
 - Compilers
 - Detecting terminals and non-terminals
 - Creating first and follow sets
-- April 27, 2023
+- June 4, 2023
 
 ## Requirements
 
@@ -22,7 +22,7 @@ relative path of the test case in the `test_cases` list inside the `run.sh` scri
 
 ```
 python3 main.py
-8
+8 3
 E -> T EPrime
 EPrime -> + T EPrime
 EPrime -> ' '
@@ -31,32 +31,16 @@ TPrime -> * F TPrime
 TPrime -> ' '
 F -> ( E )
 F -> id
+id + id * id
+id * id + ( id * id + id )
+id +
 ------ TERMINALS AND NON TERMINALS ------
-Terminal: id, (, *, ), +
-Non terminal: TPrime, E, EPrime, T, F
+Terminal: *, id, ), +, (
+Non terminal: EPrime, T, TPrime, E, F
 ------ FIRST AND FOLLOWS ------
-F => FIRST = {'id', '('}, FOLLOW = {'+', '*', ')', '$'}
-T => FIRST = {'id', '('}, FOLLOW = {'+', ')', '$'}
-E => FIRST = {'id', '('}, FOLLOW = {')', '$'}
-EPrime => FIRST = {' ', '+'}, FOLLOW = {')', '$'}
-TPrime => FIRST = {' ', '*'}, FOLLOW = {'$', ')', '+'}
+F => FIRST = {'(', 'id'}, FOLLOW = {'+', '*', '$', ')'}
+T => FIRST = {'(', 'id'}, FOLLOW = {'+', '$', ')'}
+E => FIRST = {'(', 'id'}, FOLLOW = {'$', ')'}
+EPrime => FIRST = {'+', ' '}, FOLLOW = {'$', ')'}
+TPrime => FIRST = {'*', ' '}, FOLLOW = {'+', '$', ')'}
 ```
-
-```
-python3 main.py
-6
-E -> E + T
-E -> T
-T -> T * F
-T -> F
-F -> id
-F -> ( E )
------- TERMINALS AND NON TERMINALS ------
-Terminal: id, (, ), +, *
-Non terminal: T, F, E
------- FIRST AND FOLLOWS ------
-F => FIRST = {'id', '('}, FOLLOW = {'$', ')', '+', '*'}
-T => FIRST = {'id', '('}, FOLLOW = {'$', '+', '*', ')'}
-E => FIRST = {'id', '('}, FOLLOW = {'$', '+', ')'}
-```
-
